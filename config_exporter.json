@@ -1,0 +1,28 @@
+{
+  "name": "exporter",
+  "log": {
+    "level": "info",
+    "path": "/log"
+  },
+  "loc": "",
+  "pub_id": "",
+  "mode": "client-hash",
+  "path": {
+    "db": "./db",
+    "stg": "./stagept",
+    "ref": "../res/ref",
+    "script": {
+      "arena": "./script",
+      "battle": "../../script"
+    }
+  },
+  "service": {
+    "worker_thread": 1,
+    "rooms": {
+      "init_count": 1,
+      "increase_count": 10,
+      "hash_load_factor": 0.1,
+      "recycle": 1
+    }
+  }
+}

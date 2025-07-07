@@ -11,9 +11,17 @@ class Settings:
     # 데이터베이스 설정
     DB_HOST: str = os.getenv("DB_HOST", "")
     DB_PORT: str = os.getenv("DB_PORT", "")
-    DB_USER: str = os.getenv("DB_USER", "dev")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "dev")
+    DB_USER: str = os.getenv("DB_USER", "")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
     DB_NAME: str = os.getenv("DB_NAME", "battle_versions")
+
+    SVN_USER: str = os.getenv("SVN_USER", "")
+    SVN_PASSWORD: str = os.getenv("SVN_PASSWORD", "")
+
+    SVN_URL1: str = os.getenv("SVN_URL1", "")
+    SVN_URL2: str = os.getenv("SVN_URL2", "")
+    SVN_URL3: str = os.getenv("SVN_URL3", "")
+    SVN_URL4: str = os.getenv("SVN_URL4", "")
     
     # 데이터베이스 URL 생성
     @property
