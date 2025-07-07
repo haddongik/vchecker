@@ -9,8 +9,8 @@ class Settings:
     """애플리케이션 설정 클래스"""
     
     # 데이터베이스 설정
-    DB_HOST: str = os.getenv("DB_HOST", "")
-    DB_PORT: str = os.getenv("DB_PORT", "")
+    DB_HOST: str = os.getenv("DB_HOST", "10.10.20.96")
+    DB_PORT: str = os.getenv("DB_PORT", "3306")
     DB_USER: str = os.getenv("DB_USER", "dev")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "dev")
     DB_NAME: str = os.getenv("DB_NAME", "battle_versions")
@@ -21,7 +21,7 @@ class Settings:
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     # Slack 설정
-    SLACK_WEBHOOK_URL: str = os.getenv("SLACK_WEBHOOK_URL", "")
+    SLACK_WEBHOOK_URL: str = os.getenv("SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/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")
     
     # 애플리케이션 설정
     APP_NAME: str = "Battle Version Tracker"
