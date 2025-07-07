@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtualenv
+venv/
+ENV/
+.env
+.env.*
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test
+htmlcov/
+.coverage
+.tox/
+
+# FastAPI static
+static/images/
+
+# 기타
+*.bak 
