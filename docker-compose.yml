@@ -6,31 +6,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DB_HOST=db
+      - DB_HOST=host.docker.internal
       - DB_PORT=3306
       - DB_USER=dev
       - DB_PASSWORD=dev
       - DB_NAME=battle_versions
       - DEBUG=True
       - LOG_LEVEL=INFO
-    depends_on:
-      - db
     volumes:
       - ./config.env:/app/config.env:ro
     restart: unless-stopped
-
-  db:
-    image: mysql:8.0
-    environment:
-      - MYSQL_ROOT_PASSWORD=dev~!23
-      - MYSQL_DATABASE=battle_versions
-      - MYSQL_USER=dev
-      - MYSQL_PASSWORD=dev
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    restart: unless-stopped
-
-volumes:
-  mysql_data: 
+    extra_hosts:
+      - "host.docker.internal:host-gateway" 
