@@ -14,6 +14,9 @@ class Settings:
     DB_USER: str = os.getenv("DB_USER", "dev")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "dev")
     DB_NAME: str = os.getenv("DB_NAME", "battle_versions")
+
+    SVN_USER: str = os.getenv("SVN_USER", "")
+    SVN_PASSWORD: str = os.getenv("SVN_PASSWORD", "")
     
     # 데이터베이스 URL 생성
     @property
@@ -21,7 +24,7 @@ class Settings:
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     # Slack 설정
-    SLACK_WEBHOOK_URL: str = os.getenv("SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/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")
+    SLACK_WEBHOOK_URL: str = os.getenv("SLACK_WEBHOOK_URL", "")
     
     # 애플리케이션 설정
     APP_NAME: str = "Battle Version Tracker"

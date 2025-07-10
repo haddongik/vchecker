@@ -2,21 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 import logging
+import os
+import shutil
+import subprocess
+from datetime import datetime
 
 from ..database import get_db
 from ..models import Version
 from ..schemas import VersionCreate, VersionResponse, VersionList
 from ..services.slack_service import SlackService
+from ..config import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.post("/", response_model=VersionResponse, status_code=status.HTTP_201_CREATED)
-async def create_version(
-    version_data: VersionCreate,
-    db: Session = Depends(get_db)
-):
+async def create_server_version(version_data: VersionCreate, db: Session = Depends(get_db)):
     """
     새로운 버전 정보를 등록합니다.
     
@@ -141,4 +143,80 @@ async def get_latest_version(db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="최신 버전 조회 중 오류가 발생했습니다."
-        ) 
+        )
+
+
+@router.post("/cdn", response_model=VersionResponse, status_code=status.HTTP_201_CREATED)
+async def create_client_version(
+    branch: str,
+    revision: str,
+    db: Session = Depends(get_db)
+):
+
+    # buildtag = yyyymmdd_revision
+    build_tag = f"{datetime.now().strftime('%Y%m%d')}_{revision}"
+
+    svn_urls = {
+        "stove_live": "",
+        "stove_live_open": "",
+        "zlong_live": "",
+        "zlong_live_open": ""
+    }
+
+    if branch not in svn_urls:
+        raise HTTPException(status_code=400, detail=f"Invalid branch: {branch}")
+
+    try:
+        work_dir = f"./cdn/{branch}"
+        
+        # 폴더 정리
+        shutil.rmtree(work_dir, ignore_errors=True)
+        os.makedirs(work_dir, exist_ok=True)
+        
+        # 파일 복사
+        shutil.copy("./exporter", f"{work_dir}/exporter")
+        shutil.copy("./config_exporter.json", f"{work_dir}/config.json")
+        
+        # SVN 체크아웃 (계정 정보 포함)
+        svn_url = svn_urls[branch]
+        svn_auth = ["--username", settings.SVN_USER, "--password", settings.SVN_PASSWORD, "--non-interactive"]
+        
+        subprocess.run(["svn", "export", f"{svn_url}/bin64/game.bin", work_dir] + svn_auth, check=True, timeout=300)
+        subprocess.run(["svn", "checkout", f"{svn_url}/db", f"{work_dir}/db"] + svn_auth, check=True, timeout=300)
+        
+        # exporter 실행
+        os.chdir(work_dir)
+        result = subprocess.run(["./exporter"], capture_output=True, text=True, timeout=300)
+        
+        # 해시 추출
+        script_hash = "unknown"
+        db_hash = "unknown"
+        
+        for line in result.stdout.split('\n'):
+            if line.startswith('SCRIPT_HASH='):
+                script_hash = line.split('=')[1]
+            elif line.startswith('DB_HASH='):
+                db_hash = line.split('=')[1]
+        
+        logger.info(f"script_hash: {script_hash}")
+        logger.info(f"db_hash: {db_hash}")
+
+        # DB 저장
+        db_version = Version(
+            target="client",
+            build_tag=build_tag,
+            repo_root=branch,
+            script_hash=script_hash,
+            db_hash=db_hash
+        )
+        db.add(db_version)
+        db.commit()
+        db.refresh(db_version)
+        
+        logger.info(f"클라이언트 버전 생성 완료: {branch}")
+        return db_version
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"클라이언트 버전 생성 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail="클라이언트 버전 생성 중 오류가 발생했습니다.")
