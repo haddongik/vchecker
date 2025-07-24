@@ -157,10 +157,10 @@ async def create_client_version(
     build_tag = f"{datetime.now().strftime('%Y%m%d')}_{revision}"
 
     svn_urls = {
-        "stove_live": "",
-        "stove_live_open": "",
-        "zlong_live": "",
-        "zlong_live_open": ""
+        "stove_live": settings.SVN_URL1,
+        "stove_live_open": settings.SVN_URL2,
+        "zlong_live": settings.SVN_URL3,
+        "zlong_live_open": settings.SVN_URL4
     }
 
     if branch not in svn_urls:

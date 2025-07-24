@@ -17,6 +17,11 @@ class Settings:
 
     SVN_USER: str = os.getenv("SVN_USER", "")
     SVN_PASSWORD: str = os.getenv("SVN_PASSWORD", "")
+
+    SVN_URL1: str = os.getenv("SVN_URL1", "")
+    SVN_URL2: str = os.getenv("SVN_URL2", "")
+    SVN_URL3: str = os.getenv("SVN_URL3", "")
+    SVN_URL4: str = os.getenv("SVN_URL4", "")
     
     # 데이터베이스 URL 생성
     @property
