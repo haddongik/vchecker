@@ -16,6 +16,9 @@ from ..config import settings
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+# 전역 변수로 original_dir 설정 (한 번만 세팅)
+_root_dir = None
+
 
 @router.post("/", response_model=VersionResponse, status_code=status.HTTP_201_CREATED)
 async def create_server_version(version_data: VersionCreate, db: Session = Depends(get_db)):
@@ -168,6 +171,11 @@ async def create_client_version(
 
     try:
         work_dir = f"./cdn/{branch}"
+
+        global _root_dir
+        if _root_dir is None:
+            _root_dir = os.getcwd()
+        os.chdir(_root_dir)
         
         # 폴더 정리
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -183,8 +191,7 @@ async def create_client_version(
         
         subprocess.run(["svn", "export", f"{svn_url}/bin64/game.bin", work_dir] + svn_auth, check=True, timeout=300)
         subprocess.run(["svn", "checkout", f"{svn_url}/db", f"{work_dir}/db"] + svn_auth, check=True, timeout=300)
-        
-        # exporter 실행
+
         os.chdir(work_dir)
         result = subprocess.run(["./exporter"], capture_output=True, text=True, timeout=300)
         
