@@ -188,6 +188,8 @@ async def create_client_version(
         os.chdir(work_dir)
         result = subprocess.run(["./exporter"], capture_output=True, text=True, timeout=300)
         
+        logger.info(f"result: {result}")
+
         # 해시 추출
         script_hash = "unknown"
         db_hash = "unknown"
