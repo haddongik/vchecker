@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 애플리케이션 코드 복사
 COPY . .
 
+# exporter 파일에 실행 권한 부여
+RUN chmod +x ./exporter
+
 # 포트 노출
 EXPOSE 8000
 
