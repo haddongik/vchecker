@@ -9,10 +9,10 @@ class Settings:
     """애플리케이션 설정 클래스"""
     
     # 데이터베이스 설정
-    DB_HOST: str = os.getenv("DB_HOST", "10.10.20.96")
-    DB_PORT: str = os.getenv("DB_PORT", "3306")
-    DB_USER: str = os.getenv("DB_USER", "dev")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "dev")
+    DB_HOST: str = os.getenv("DB_HOST", "")
+    DB_PORT: str = os.getenv("DB_PORT", "")
+    DB_USER: str = os.getenv("DB_USER", "")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
     DB_NAME: str = os.getenv("DB_NAME", "battle_versions")
 
     SVN_USER: str = os.getenv("SVN_USER", "")
