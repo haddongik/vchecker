@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import subprocess
+import threading
 from datetime import datetime
 
 from ..database import get_db
@@ -18,6 +19,82 @@ logger = logging.getLogger(__name__)
 
 # 전역 변수로 original_dir 설정 (한 번만 세팅)
 _root_dir = None
+
+def process_client_version_background(branch: str, revision: str, build_tag: str, version_id: int):
+
+    from ..database import SessionLocal
+    
+    svn_urls = {
+        "stove_live": settings.SVN_URL1,
+        "stove_live_open": settings.SVN_URL2,
+        "zlong_live": settings.SVN_URL3,
+        "zlong_live_open": settings.SVN_URL4
+    }
+    
+    db = SessionLocal()
+    try:
+        # 절대 경로로 작업 디렉토리 설정
+        work_dir = os.path.join(_root_dir, "cdn", branch)
+        
+        # 폴더 정리
+        shutil.rmtree(work_dir, ignore_errors=True)
+        os.makedirs(work_dir, exist_ok=True)
+        
+        # 파일 복사 (절대 경로 사용)
+        exporter_path = os.path.join(_root_dir, "exporter")
+        config_path = os.path.join(_root_dir, "config_exporter.json")
+        shutil.copy(exporter_path, os.path.join(work_dir, "exporter"))
+        shutil.copy(config_path, os.path.join(work_dir, "config.json"))
+        
+        # SVN 체크아웃 (계정 정보 포함)
+        svn_url = svn_urls[branch]
+        svn_auth = ["--username", settings.SVN_USER, "--password", settings.SVN_PASSWORD, "--non-interactive"]
+
+        subprocess.run(["svn", "export", f"{svn_url}/bin64/game.bin", work_dir] + svn_auth, check=True, timeout=300)
+        subprocess.run(["svn", "checkout", f"{svn_url}/db", os.path.join(work_dir, "db")] + svn_auth, check=True, timeout=300)
+    
+        # exporter 실행 (절대 경로 사용)
+        exporter_work_path = os.path.join(work_dir, "exporter")
+        result = subprocess.run([exporter_work_path], capture_output=True, text=True, timeout=300, cwd=work_dir)
+        
+        logger.info(f"result: {result}")
+
+        # 해시 추출
+        script_hash = "unknown"
+        db_hash = "unknown"
+        
+        for line in result.stdout.split('\n'):
+            if line.startswith('SCRIPT_HASH='):
+                script_hash = line.split('=')[1]
+            elif line.startswith('DB_HASH='):
+                db_hash = line.split('=')[1]
+        
+        logger.info(f"script_hash: {script_hash}")
+        logger.info(f"db_hash: {db_hash}")
+
+        # DB 업데이트
+        version = db.query(Version).filter(Version.id == version_id).first()
+        if version:
+            version.script_hash = script_hash
+            version.db_hash = db_hash
+            db.commit()
+            logger.info(f"클라이언트 버전 처리 완료: {branch} (ID: {version_id})")
+        else:
+            logger.error(f"버전을 찾을 수 없음: {version_id}")
+            
+    except Exception as e:
+        logger.error(f"클라이언트 버전 처리 실패: {str(e)}")
+        # 실패 시 DB 업데이트
+        try:
+            version = db.query(Version).filter(Version.id == version_id).first()
+            if version:
+                version.script_hash = "error"
+                version.db_hash = "error"
+                db.commit()
+        except:
+            pass
+    finally:
+        db.close()
 
 
 @router.post("/", response_model=VersionResponse, status_code=status.HTTP_201_CREATED)
@@ -72,12 +149,6 @@ async def get_versions(
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    """
-    등록된 버전 목록을 조회합니다.
-    
-    - **skip**: 건너뛸 레코드 수 (기본값: 0)
-    - **limit**: 반환할 최대 레코드 수 (기본값: 100)
-    """
     try:
         versions = db.query(Version).offset(skip).limit(limit).all()
         total = db.query(Version).count()
@@ -97,11 +168,6 @@ async def get_version(
     version_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    특정 버전 정보를 조회합니다.
-    
-    - **version_id**: 조회할 버전의 ID
-    """
     try:
         version = db.query(Version).filter(Version.id == version_id).first()
         
@@ -155,7 +221,11 @@ async def create_client_version(
     revision: str,
     db: Session = Depends(get_db)
 ):
-
+    # 루트 디렉토리 경로 설정
+    global _root_dir
+    if _root_dir is None:
+        _root_dir = os.getcwd()
+        
     # buildtag = yyyymmdd_revision
     build_tag = f"{datetime.now().strftime('%Y%m%d')}_{revision}"
 
@@ -169,63 +239,25 @@ async def create_client_version(
     if branch not in svn_urls:
         raise HTTPException(status_code=400, detail=f"Invalid branch: {branch}")
 
-    try:
-        work_dir = f"./cdn/{branch}"
-
-        global _root_dir
-        if _root_dir is None:
-            _root_dir = os.getcwd()
-        os.chdir(_root_dir)
-        
-        # 폴더 정리
-        shutil.rmtree(work_dir, ignore_errors=True)
-        os.makedirs(work_dir, exist_ok=True)
-        
-        # 파일 복사
-        shutil.copy("./exporter", f"{work_dir}/exporter")
-        shutil.copy("./config_exporter.json", f"{work_dir}/config.json")
-        
-        # SVN 체크아웃 (계정 정보 포함)
-        svn_url = svn_urls[branch]
-        svn_auth = ["--username", settings.SVN_USER, "--password", settings.SVN_PASSWORD, "--non-interactive"]
-        
-        subprocess.run(["svn", "export", f"{svn_url}/bin64/game.bin", work_dir] + svn_auth, check=True, timeout=300)
-        subprocess.run(["svn", "checkout", f"{svn_url}/db", f"{work_dir}/db"] + svn_auth, check=True, timeout=300)
-
-        os.chdir(work_dir)
-        result = subprocess.run(["./exporter"], capture_output=True, text=True, timeout=300)
-        
-        logger.info(f"result: {result}")
-
-        # 해시 추출
-        script_hash = "unknown"
-        db_hash = "unknown"
-        
-        for line in result.stdout.split('\n'):
-            if line.startswith('SCRIPT_HASH='):
-                script_hash = line.split('=')[1]
-            elif line.startswith('DB_HASH='):
-                db_hash = line.split('=')[1]
-        
-        logger.info(f"script_hash: {script_hash}")
-        logger.info(f"db_hash: {db_hash}")
-
-        # DB 저장
-        db_version = Version(
-            target="client",
-            build_tag=build_tag,
-            repo_root=branch,
-            script_hash=script_hash,
-            db_hash=db_hash
-        )
-        db.add(db_version)
-        db.commit()
-        db.refresh(db_version)
-        
-        logger.info(f"클라이언트 버전 생성 완료: {branch}")
-        return db_version
-        
-    except Exception as e:
-        db.rollback()
-        logger.error(f"클라이언트 버전 생성 실패: {str(e)}")
-        raise HTTPException(status_code=500, detail="클라이언트 버전 생성 중 오류가 발생했습니다.")
+    # 즉시 응답할 버전 정보 생성
+    db_version = Version(
+        target="client",
+        build_tag=build_tag,
+        repo_root=branch,
+        script_hash="processing",  # 처리 중임을 나타내는 값
+        db_hash="processing"
+    )
+    db.add(db_version)
+    db.commit()
+    db.refresh(db_version)
+    
+    # 별도 스레드에서 실제 작업 수행
+    thread = threading.Thread(
+        target=process_client_version_background,
+        args=(branch, revision, build_tag, db_version.id)
+    )
+    thread.daemon = True  # 메인 프로세스 종료 시 함께 종료
+    thread.start()
+    
+    logger.info(f"클라이언트 버전 생성 요청 완료: {branch} (ID: {db_version.id})")
+    return db_version
