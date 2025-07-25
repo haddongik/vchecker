@@ -36,22 +36,29 @@ def process_client_version_background(branch: str, revision: str, build_tag: str
         # 절대 경로로 작업 디렉토리 설정
         work_dir = os.path.join(_root_dir, "cdn", branch)
         
-        # 폴더 정리
-        shutil.rmtree(work_dir, ignore_errors=True)
-        os.makedirs(work_dir, exist_ok=True)
-        
-        # 파일 복사 (절대 경로 사용)
-        exporter_path = os.path.join(_root_dir, "exporter")
-        config_path = os.path.join(_root_dir, "config_exporter.json")
-        shutil.copy(exporter_path, os.path.join(work_dir, "exporter"))
-        shutil.copy(config_path, os.path.join(work_dir, "config.json"))
-        
-        # SVN 체크아웃 (계정 정보 포함)
+        # SVN 인증 정보
         svn_url = svn_urls[branch]
         svn_auth = ["--username", settings.SVN_USER, "--password", settings.SVN_PASSWORD, "--non-interactive"]
-
-        subprocess.run(["svn", "export", f"{svn_url}/bin64/game.bin", work_dir] + svn_auth, check=True, timeout=300)
-        subprocess.run(["svn", "checkout", f"{svn_url}/db", os.path.join(work_dir, "db")] + svn_auth, check=True, timeout=300)
+        
+        # 폴더가 없으면 새로 생성하고 체크아웃
+        if not os.path.exists(work_dir):
+            os.makedirs(work_dir, exist_ok=True)
+            
+            # 파일 복사 (절대 경로 사용)
+            exporter_path = os.path.join(_root_dir, "exporter")
+            config_path = os.path.join(_root_dir, "config_exporter.json")
+            shutil.copy(exporter_path, os.path.join(work_dir, "exporter"))
+            shutil.copy(config_path, os.path.join(work_dir, "config.json"))
+            
+            # SVN 체크아웃 (계정 정보 포함)
+            subprocess.run(["svn", "export", f"{svn_url}/bin64/game.bin", work_dir] + svn_auth, check=True, timeout=300)
+            subprocess.run(["svn", "checkout", f"{svn_url}/db", os.path.join(work_dir, "db")] + svn_auth, check=True, timeout=300)
+        else:
+            # 최신으로 강제 업데이트
+            subprocess.run(["svn", "update", "--accept", "theirs-full", "--force", os.path.join(work_dir, "db")] + svn_auth, check=True, timeout=300)
+            
+            # game.bin 파일 강제 업데이트
+            subprocess.run(["svn", "export", "--force", f"{svn_url}/bin64/game.bin", work_dir] + svn_auth, check=True, timeout=300)
     
         # exporter 실행 (절대 경로 사용)
         exporter_work_path = os.path.join(work_dir, "exporter")
