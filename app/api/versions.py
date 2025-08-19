@@ -121,12 +121,6 @@ async def create_server_version(version_data: VersionCreate, db: Session = Depen
         # 데이터베이스에 버전 정보 저장
         version = Version(**version_data.dict())
         
-        # build_tag에 'z'가 포함되어 있으면 repo_root를 'zlong_live'로 설정
-        if "z" in version.build_tag.lower():
-            version.repo_root = "zlong_live"
-        else:
-            version.repo_root = "stove_live"
-        
         db.add(version)
         db.commit()
         db.refresh(version)
