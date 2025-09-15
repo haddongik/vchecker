@@ -1,10 +1,7 @@
 import requests
 import json
 import logging
-from sqlalchemy import desc
 from ..config import settings
-from ..models import Version
-from ..database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -43,40 +40,25 @@ class SlackService:
             logger.error(f"Slack 알림 전송 실패: {str(e)}")
             return False
     
-    def _create_version_message(self, version) -> str:
+    def _create_version_message(self, version_data) -> str:
         """버전 정보를 포함한 텍스트 메시지 생성"""
         return (
-            f"🎮 *battle hash info*\n" 
-            f"• build: {version.repo_root}\n"
-            f"• target: {version.target}\n"
-            f"• git branch: {version.git_branch}\n"
-            f"• build tag: {version.build_tag}\n"
-            f"• script hash: *{version.script_hash}*\n"
-            f"• db hash: *{version.db_hash}*"
+            f"🎮 *battle hash info*\n"
+            f"• build: {version_data.get('repo_root', 'unknown')}\n"
+            f"• target: {version_data.get('target', 'unknown')}\n"
+            f"• git branch: {version_data.get('git_branch', 'unknown')}\n"
+            f"• build tag: {version_data.get('build_tag', 'unknown')}\n"
+            f"• script hash: *{version_data.get('script_hash', 'unknown')}*\n"
+            f"• db hash: *{version_data.get('db_hash', 'unknown')}*"
         ) 
     
     def _get_last_send_hashinfo(self, target_region):
         """마지막으로 전송된 target_region 별 해시 정보 조회(client, arena_server 둘다)"""
-        try:
-            with SessionLocal() as session:
-                # 클라이언트 버전 조회 (target_region에 따라 필터링)
-                client_version = session.query(Version).filter(
-                    Version.target == "client",
-                    Version.repo_root == "zlong_live" if target_region == "Zlong" else "stove_live"
-                ).order_by(desc(Version.created_at)).first()
-
-                # 아레나 서버 버전 조회
-                arena_server_version = session.query(Version).filter(
-                    Version.target == "arena_server",
-                    Version.build_tag.like("%z%" if target_region == "Zlong" else "%")
-                ).order_by(desc(Version.created_at)).first()
-            
-            return {
-                "client_script_hash": client_version.script_hash if client_version else None,
-                "client_db_hash": client_version.db_hash if client_version else None,
-                "arena_server_script_hash": arena_server_version.script_hash if arena_server_version else None,
-                "arena_server_db_hash": arena_server_version.db_hash if arena_server_version else None
-            }
-        except Exception as e:
-            logger.error(f"해시 정보 조회 실패: {str(e)}")
-            return None
+        # DB 사용 안함 - 빈 정보 반환
+        logger.warning("DB 사용 안함 - 해시 정보 조회 불가")
+        return {
+            "client_script_hash": None,
+            "client_db_hash": None,
+            "arena_server_script_hash": None,
+            "arena_server_db_hash": None
+        }
