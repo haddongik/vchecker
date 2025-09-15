@@ -49,6 +49,7 @@ class SlackService:
             f"🎮 *battle hash info*\n" 
             f"• build: {version.repo_root}\n"
             f"• target: {version.target}\n"
+            f"• git branch: {version.git_branch}\n"
             f"• build tag: {version.build_tag}\n"
             f"• script hash: *{version.script_hash}*\n"
             f"• db hash: *{version.db_hash}*"

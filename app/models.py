@@ -14,6 +14,7 @@ class Version(Base):
     target = Column(String(100), nullable=False, index=True)
     build_tag = Column(String(100), nullable=False, index=True)
     repo_root = Column(String(500), nullable=False)
+    git_branch = Column(String(255), nullable=False)
     script_hash = Column(String(255), nullable=False)
     db_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=func.now())

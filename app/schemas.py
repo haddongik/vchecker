@@ -8,6 +8,7 @@ class VersionBase(BaseModel):
     target: str = Field(..., description="대상 플랫폼")
     build_tag: str = Field(..., description="빌드 태그")
     repo_root: str = Field(..., description="레포지토리 루트")
+    git_branch: str = Field(..., description="Git 브랜치")
     script_hash: str = Field(..., description="스크립트 해시")
     db_hash: str = Field(..., description="데이터베이스 해시")
 
