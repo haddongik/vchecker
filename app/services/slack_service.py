@@ -46,8 +46,8 @@ class SlackService:
             f"🎮 *battle hash info*\n"
             f"• build: {version_data.get('repo_root', 'unknown')}\n"
             f"• target: {version_data.get('target', 'unknown')}\n"
-            f"• git branch: {version_data.get('git_branch', 'unknown')}\n"
             f"• build tag: {version_data.get('build_tag', 'unknown')}\n"
+            f"• script sha: {version_data.get('script_head', 'unknown')}\n"
             f"• script hash: *{version_data.get('script_hash', 'unknown')}*\n"
             f"• db hash: *{version_data.get('db_hash', 'unknown')}*"
         ) 
